@@ -1,11 +1,19 @@
 {
   "Version": 1,
-  "Hash": "gRbSnrjFv+xP5WivGn9LfLxNYls59k4lty969f/VAZ0=",
-  "Source": "ReyMagoAPI",
-  "BasePath": "_content/ReyMagoAPI",
+  "Hash": "Psd7XtUx+mmCPh9y0dy7YfoYo3i+YwLTFKKuBM4XYsM=",
+  "Source": "FamilyApp",
+  "BasePath": "_content/FamilyApp",
   "Mode": "Default",
   "ManifestType": "Build",
   "ReferencedProjectsConfiguration": [],
-  "DiscoveryPatterns": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "FamilyApp\\wwwroot",
+      "Source": "FamilyApp",
+      "ContentRoot": "C:\\Users\\S\\source\\repos\\FamilyApp\\ReyMagoAPI\\wwwroot\\",
+      "BasePath": "_content/FamilyApp",
+      "Pattern": "**"
+    }
+  ],
   "Assets": []
 }

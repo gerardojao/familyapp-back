@@ -10715,11 +10715,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\S\\source\\repos\\ReyMagoAPI\\ReyMagoAPI\\ReyMagoAPI.csproj",
-      "projectName": "ReyMagoAPI",
-      "projectPath": "C:\\Users\\S\\source\\repos\\ReyMagoAPI\\ReyMagoAPI\\ReyMagoAPI.csproj",
+      "projectUniqueName": "C:\\Users\\S\\source\\repos\\FamilyApp\\ReyMagoAPI\\FamilyApp.csproj",
+      "projectName": "FamilyApp",
+      "projectPath": "C:\\Users\\S\\source\\repos\\FamilyApp\\ReyMagoAPI\\FamilyApp.csproj",
       "packagesPath": "C:\\Users\\S\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\S\\source\\repos\\ReyMagoAPI\\ReyMagoAPI\\obj\\",
+      "outputPath": "C:\\Users\\S\\source\\repos\\FamilyApp\\ReyMagoAPI\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\S\\AppData\\Roaming\\NuGet\\NuGet.Config",

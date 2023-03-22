@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "c69fH2AKmUEOPuPX7QoF01d0O2TfGlggBNxX3jgoDBG1VzRPJepC38iTBFl7n6C4sl+7vU1KM7FFH2JXOBlFaw==",
+  "dgSpecHash": "fon7FFZ0BaB1rSMAJHzm4zFo//lV33sGMApapMpfLQsRosdOhbh6wLrB9/f4blb6yYqlIpdtuc+X8vH8auUxSg==",
   "success": true,
-  "projectFilePath": "C:\\Users\\S\\source\\repos\\ReyMagoAPI\\ReyMagoAPI\\ReyMagoAPI.csproj",
+  "projectFilePath": "C:\\Users\\S\\source\\repos\\FamilyApp\\ReyMagoAPI\\FamilyApp.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\S\\.nuget\\packages\\automapper\\12.0.0\\automapper.12.0.0.nupkg.sha512",
     "C:\\Users\\S\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.0\\automapper.extensions.microsoft.dependencyinjection.12.0.0.nupkg.sha512",

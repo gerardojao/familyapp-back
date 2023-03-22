@@ -9,7 +9,7 @@
     }
   },
   "profiles": {
-    "ReyMagoAPI": {
+    "FamilyApp": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,

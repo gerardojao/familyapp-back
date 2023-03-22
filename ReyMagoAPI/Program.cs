@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using ReyMagoApi.DataAccess;
-using ReyMagoAPI.Core.Interfaces;
-using ReyMagoAPI.Repositories;
+using FamilyApp.Data;
+using NuGet.Protocol.Core.Types;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,14 +10,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 //COnexion a la BAse de Datos
-builder.Services.AddDbContext<AppDbContext>
+builder.Services.AddDbContext<dbContext>
     (options => { options.UseSqlServer(builder.Configuration.GetConnectionString("DevConnection")); });
 
 //agregamos los repositorios
-builder.Services.AddTransient<ISolicitudIngresoRepository, SolicitudRepositorio>();
+//builder.Services.AddTransient<IFichaEgresoRepository, FichaEgresoRepositorio>();
+//builder.Services.AddTransient<IEgresoRepository, EgresoRepositorio>();
+//builder.Services.AddTransient<IRepository, Repository>();
+builder.Services.AddScoped<IRepository, Repository<dbContext>>();
 
-//MAPPER
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+////MAPPER
+//builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

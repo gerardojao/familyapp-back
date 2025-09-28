@@ -12,7 +12,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 //COnexion a la BAse de Datos
 builder.Services.AddDbContext<dbContext>
-    (options => { options.UseSqlServer(builder.Configuration.GetConnectionString("DevConnection")); });
+    (options => { options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")); });
 
 //agregamos los repositorios
 

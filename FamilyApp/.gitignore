@@ -1,0 +1,21 @@
+# Archivos y carpetas generados por Visual Studio
+.vs/
+*.suo
+*.user
+*.bak
+*.ide/
+
+# Binarios y carpetas de compilación
+[Bb]in/
+[Oo]bj/
+Debug/
+Release/
+
+# Paquetes y dependencias
+packages/
+*.nupkg
+
+# Archivos de .NET Core/ASP.NET Core (net6.0, etc.)
+*/bin/
+*/obj/
+*.db

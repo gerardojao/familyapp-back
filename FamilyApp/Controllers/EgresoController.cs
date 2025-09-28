@@ -99,50 +99,90 @@ namespace FamilyApp.Controllers
             return Ok(respuesta);
         }
 
-        // GET: api/egresosTotales por mes
-        [HttpGet("totalesPorMes{fechaInicio}/{fechaFin}")]
-        public async Task<ActionResult<IEnumerable<Egreso>>> GetEgresosPorMes( DateTime fechaInicio, DateTime fechaFin)
+        // GET: api/Egreso/detalle?fechaInicio=2025-09-01&fechaFin=2025-09-26&tipoId=1
+        [HttpGet("detalle")]
+        public async Task<ActionResult> GetEgresosDetalle(
+            [FromQuery] DateTime? fechaInicio,
+            [FromQuery] DateTime? fechaFin,
+            [FromQuery] int? tipoId)
         {
-            Respuesta<object> respuesta = new();
+            var respuesta = new Respuesta<object>();
             try
             {
-                var egre = await (from _egreso in _context.Egresos
-                                  join _fEgreso in _context.FichaEgresos on _egreso.Id equals _fEgreso.NombreEgreso
-                                  where _egreso.Id == _fEgreso.NombreEgreso && _fEgreso.Fecha >= fechaInicio && _fEgreso.Fecha <= fechaFin
-                                  select new
-                                  {
-                                      _egreso.Nombre,
-                                      _fEgreso.Importe
-                                  }).OrderByDescending(x => x.Importe).ToListAsync();
+                DateTime? fi = fechaInicio?.Date;
+                DateTime? ffExcl = fechaFin?.Date.AddDays(1);
 
-                if (egre != null)
-                {
-                    var egreT = from e in egre
-                                group e by e.Nombre into totals
-                                select new
-                                {
-                                    Cuenta_Egreso = totals.Key,
-                                    Total = totals.Sum(e => e.Importe)
-                                };
+                var query = from f in _context.FichaEgresos.AsNoTracking()
+                            join e in _context.Egresos.AsNoTracking()
+                                 on f.NombreEgreso equals e.Id
+                            where (!fi.HasValue || (f.Fecha.HasValue && f.Fecha.Value >= fi.Value))
+                               && (!ffExcl.HasValue || (f.Fecha.HasValue && f.Fecha.Value < ffExcl.Value))
+                               && (!tipoId.HasValue || f.NombreEgreso == tipoId.Value)
+                            orderby f.Fecha descending, f.Id descending
+                            select new
+                            {
+                                id = f.Id,
+                                fecha = f.Fecha,
+                                mes = f.Mes,
+                                tipoId = e.Id,
+                                tipo = e.Nombre,
+                                descripcion = f.Descripcion,
+                                importe = f.Importe
+                            };
 
-                    respuesta.Data.Add(egreT);
-                    respuesta.Ok = 1;
-                    respuesta.Message = "Egresos e Importe";
-                }
-                else
-                {
-                    respuesta.Ok = 0;
-                    respuesta.Message = "No hay Egresos";
-                }
+                var detalles = await query.ToListAsync();
+
+                respuesta.Data.Add(detalles);
+                respuesta.Ok = 1;
+                respuesta.Message = "Detalle de egresos";
+                return Ok(respuesta);
             }
             catch (Exception e)
             {
                 respuesta.Ok = 0;
                 respuesta.Message = e.Message + " " + e.InnerException;
+                return Ok(respuesta);
             }
-            return Ok(respuesta);
         }
 
+
+        [HttpGet("totalesPorMes")]
+        public async Task<ActionResult> GetEgresosPorMesQuery([FromQuery] DateTime fechaInicio,
+                                                              [FromQuery] DateTime fechaFin)
+        {
+            var respuesta = new Respuesta<object>();
+            try
+            {
+                var fi = fechaInicio.Date;
+                var ffExcl = fechaFin.Date.AddDays(1); // [fi, ffExcl)
+
+                var egre = await (from e in _context.Egresos.AsNoTracking()
+                                  join f in _context.FichaEgresos.AsNoTracking()
+                                       on e.Id equals f.NombreEgreso
+                                  where f.Fecha.HasValue
+                                     && f.Fecha.Value >= fi
+                                     && f.Fecha.Value < ffExcl
+                                  select new { e.Nombre, f.Importe })
+                                 .OrderByDescending(x => x.Importe)
+                                 .ToListAsync();
+
+                var egreT = egre.GroupBy(x => x.Nombre)
+                                .Select(g => new 
+                                { Cuenta_Egreso = g.Key, 
+                                    Total = g.Sum(x => x.Importe) 
+                                });
+
+                respuesta.Data.Add(egreT);
+                respuesta.Ok = 1;
+                respuesta.Message = "Egresos e Importe";
+                return Ok(respuesta);
+            }
+            catch (Exception ex)
+            {
+                respuesta.Ok = 0; respuesta.Message = ex.Message;
+                return Ok(respuesta);
+            }
+        }
 
 
         // POST: api/Egreso

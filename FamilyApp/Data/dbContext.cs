@@ -25,8 +25,7 @@ public partial class dbContext : DbContext
     public virtual DbSet<Ingreso> Ingresos { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("server=DESKTOP-O0NC63R\\SQLEXPRESS;database=familyApp;trusted_connection=true;encrypt=false;");
+        => optionsBuilder.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=familyApp;Trusted_Connection=true;MultipleActiveResultSets=true;Encrypt=false");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +34,7 @@ public partial class dbContext : DbContext
             entity.Property(e => e.Nombre)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+          
         });
 
         modelBuilder.Entity<FichaEgreso>(entity =>
@@ -49,12 +49,9 @@ public partial class dbContext : DbContext
             entity.Property(e => e.Mes)
                 .HasMaxLength(10)
                 .IsUnicode(false);
-
-            //entity
-            ////.HasOne(d => d.NombreEgresoNavigation).WithMany(p => p.FichaEgresos)
-            //    .HasForeignKey(d => d.NombreEgreso)
-            //    .OnDelete(DeleteBehavior.ClientSetNull)
-            //    .HasConstraintName("FK_FichaEgreso_Egresos");
+            entity.Property(e => e.Descripcion)
+                .HasMaxLength(50)
+                .IsRequired(false);
         });
 
         modelBuilder.Entity<FichaIngreso>(entity =>
@@ -69,6 +66,9 @@ public partial class dbContext : DbContext
             entity.Property(e => e.Mes)
                 .HasMaxLength(10)
                 .IsUnicode(false);
+            entity.Property(e => e.Descripcion)
+                .HasMaxLength(50)
+                .IsRequired(false);
         });
 
         modelBuilder.Entity<Ingreso>(entity =>

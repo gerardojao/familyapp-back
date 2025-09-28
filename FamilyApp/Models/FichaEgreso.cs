@@ -11,18 +11,14 @@ public partial class FichaEgreso
 
     public string Foto { get; set; } = null!;
 
-    //[NotMapped]
-    //public IFormFile File { get; set; }
-
-
     public DateTime? Fecha { get; set; }
 
     public string Mes { get; set; } = null!;
 
     public int NombreEgreso { get; set; }
 
+    public string? Descripcion { get; set; }
+
     public decimal Importe { get; set; }
 
-    //[JsonIgnore]
-    //public virtual Egreso NombreEgresoNavigation { get; set; } = null!;
 }

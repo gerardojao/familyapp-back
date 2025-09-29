@@ -1,42 +1,144 @@
-using Microsoft.EntityFrameworkCore;
 using FamilyApp.Data;
-
-using System;
+using FamilyApp.Models;
+using FamilyApp.Services;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-// Add services to the container.
-
+// -------------------- Servicios (antes de Build) --------------------
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-//COnexion a la BAse de Datos
-builder.Services.AddDbContext<dbContext>
-    (options => { options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")); });
 
-//agregamos los repositorios
-
-builder.Services.AddScoped<IRepository, Repository<dbContext>>();
-
-//Add COrs
-builder.Services.AddCors(options =>
+// DB
+builder.Services.AddDbContext<dbContext>(options =>
 {
-    options.AddPolicy("MyAllowSpecificOrigins",
-                      builder =>
-                      {
-                          builder.AllowAnyOrigin();
-                          builder.AllowAnyHeader();
-                          builder.AllowAnyMethod();
-                      });
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
+// Servicios propios
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IRepository, Repository<dbContext>>();
 
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("MyAllowSpecificOrigins", policy =>
+    {
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
+// Auth (JWT)
+var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!);
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false; // en prod: true + HTTPS
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        // Sesión única (1 login por cuenta)
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async ctx =>
+            {
+                try
+                {
+                    var db = ctx.HttpContext.RequestServices.GetRequiredService<dbContext>();
+                    var principal = ctx.Principal!;
+                    var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? principal.FindFirstValue("sub");
+                    var jti = principal.FindFirstValue("jti");
+
+                    if (string.IsNullOrEmpty(sub) || string.IsNullOrEmpty(jti))
+                    {
+                        ctx.Fail("Token inválido.");
+                        return;
+                    }
+
+                    var userId = int.Parse(sub);
+                    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+
+                    if (user == null || user.ActiveSessionJti == null
+                        || user.ActiveSessionJti.ToString() != jti
+                        || (user.ActiveSessionExpiresAt.HasValue && user.ActiveSessionExpiresAt < DateTime.UtcNow))
+                    {
+                        ctx.Fail("Sesión no válida o caducada.");
+                        return;
+                    }
+                }
+                catch
+                {
+                    ctx.Fail("Error validando la sesión.");
+                }
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// Swagger (registrar ANTES de Build)
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "FamilyApp API", Version = "v1" });
 
+    // Soporte para Authorization: Bearer <token>
+    var scheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Introduce: Bearer {tu_token}"
+    };
+    c.AddSecurityDefinition("Bearer", scheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        [scheme] = Array.Empty<string>()
+    });
+});
+
+// -------------------- Build --------------------
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Semilla de usuario admin
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<dbContext>();
+    var pwd = scope.ServiceProvider.GetRequiredService<IPasswordService>();
+
+    if (!db.Users.Any())
+    {
+        db.Users.Add(new AppUser
+        {
+            Email = "gerardojao@gmail.com",
+            PasswordHash = pwd.Hash("Gjaoa*1970"),
+            Role = "admin",
+            IsActive = true
+        });
+        db.SaveChanges();
+    }
+}
+
+// -------------------- Middleware (después de Build) --------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -45,8 +147,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+
 app.UseCors("MyAllowSpecificOrigins");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

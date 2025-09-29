@@ -1,10 +1,9 @@
 ﻿
 
-using Microsoft.AspNetCore.Mvc;
-using FamilyApp.Models;
-
-
 using FamilyApp.Data;
+using FamilyApp.Models;
+using Microsoft.AspNetCore.Mvc;
+using FamilyApp.DTOs.Egresos;
 using Microsoft.EntityFrameworkCore;
 
 namespace FamilyApp.Controllers
@@ -45,7 +44,7 @@ namespace FamilyApp.Controllers
                 else
                 {
                     respuesta.Ok = 0;
-                    respuesta.Message = "No hay egresos registradosThere are no rol yet";
+                    respuesta.Message = "No hay egresos registrados";
                 }
 
             }

@@ -24,6 +24,11 @@ public partial class dbContext : DbContext
 
     public virtual DbSet<Ingreso> Ingresos { get; set; }
 
+    public virtual DbSet<AppUser> Users { get; set; }
+
+    public DbSet<PasswordReset> PasswordResets { get; set; } = default!;
+
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=familyApp;Trusted_Connection=true;MultipleActiveResultSets=true;Encrypt=false");
 
@@ -35,6 +40,14 @@ public partial class dbContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false);
           
+        });
+
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.ToTable("Users");
+            entity.HasIndex(u => u.Email).IsUnique();
+            entity.Property(u => u.Email).IsUnicode(false);
+            entity.Property(u => u.Role).IsUnicode(false);
         });
 
         modelBuilder.Entity<FichaEgreso>(entity =>
@@ -52,6 +65,7 @@ public partial class dbContext : DbContext
             entity.Property(e => e.Descripcion)
                 .HasMaxLength(50)
                 .IsRequired(false);
+            entity.Property(e => e.Eliminado).HasDefaultValue(false);
         });
 
         modelBuilder.Entity<FichaIngreso>(entity =>

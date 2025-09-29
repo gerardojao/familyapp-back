@@ -21,4 +21,8 @@ public partial class FichaEgreso
 
     public decimal Importe { get; set; }
 
+    // Soft delete
+    public bool Eliminado { get; set; }          // default = false
+    public DateTime? FechaEliminacion { get; set; }
+
 }

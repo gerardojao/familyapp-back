@@ -19,4 +19,8 @@ public partial class FichaIngreso
     public string? Descripcion { get; set; }
 
     public decimal Importe { get; set; }
+
+    // --- Soft delete ---
+    public bool Eliminado { get; set; }          // default false
+    public DateTime? FechaEliminacion { get; set; }
 }

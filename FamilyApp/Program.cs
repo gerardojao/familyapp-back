@@ -24,6 +24,11 @@ builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IRepository, Repository<dbContext>>();
 
+// IEmailSender: registra SOLO una vez y SIEMPRE antes del Build.
+// Por ahora usamos DevEmailSender tanto en dev como en prod.
+// (Cuando tengas uno real, haz el if por environment aquí mismo.)
+builder.Services.AddSingleton<IEmailSender, DevEmailSender>();
+
 // CORS
 builder.Services.AddCors(options =>
 {
@@ -72,7 +77,11 @@ builder.Services
                         return;
                     }
 
-                    var userId = int.Parse(sub);
+                    if (!int.TryParse(sub, out var userId))
+                    {
+                        ctx.Fail("Sub inválido."); return;
+                    }
+
                     var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
 
                     if (user == null || user.ActiveSessionJti == null
@@ -93,13 +102,12 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// Swagger (registrar ANTES de Build)
+// Swagger (antes de Build)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "FamilyApp API", Version = "v1" });
 
-    // Soporte para Authorization: Bearer <token>
     var scheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -119,7 +127,7 @@ builder.Services.AddSwaggerGen(c =>
 // -------------------- Build --------------------
 var app = builder.Build();
 
-// Semilla de usuario admin
+// Semilla de usuario admin (solo ejemplo)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<dbContext>();

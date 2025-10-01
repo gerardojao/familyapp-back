@@ -28,12 +28,20 @@ namespace FamilyApp.Services
             expiresAt = DateTime.UtcNow.AddMinutes(mins);
 
             var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role ?? "user"),
-            new Claim(JwtRegisteredClaimNames.Jti, jti.ToString()),
-        };
+            {
+                // ✅ Id estándar en JWT
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+
+                // (Opcional pero útil) redundancia para middlewares que usan NameIdentifier
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+
+                // ✅ Email estándar + versión ClaimTypes
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+                new Claim(ClaimTypes.Email, user.Email ?? ""),
+
+                new Claim(ClaimTypes.Role, user.Role ?? "user"),
+                new Claim(JwtRegisteredClaimNames.Jti, jti.ToString()),
+            };
 
             var token = new JwtSecurityToken(
                 issuer: issuer,

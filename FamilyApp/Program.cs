@@ -1,17 +1,20 @@
 using FamilyApp.Data;
 using FamilyApp.Models;
 using FamilyApp.Services;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // -------------------- Servicios (antes de Build) --------------------
 builder.Services.AddControllers();
+
 
 // DB
 builder.Services.AddDbContext<dbContext>(options =>
@@ -23,6 +26,10 @@ builder.Services.AddDbContext<dbContext>(options =>
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IRepository, Repository<dbContext>>();
+
+// Program.cs
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // IEmailSender: registra SOLO una vez y SIEMPRE antes del Build.
 // Por ahora usamos DevEmailSender tanto en dev como en prod.
@@ -41,10 +48,13 @@ builder.Services.AddCors(options =>
 // Auth (JWT)
 var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!);
 
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.RequireHttpsMetadata = false; // en prod: true + HTTPS
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -55,7 +65,9 @@ builder.Services
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(key),
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+            NameClaimType = JwtRegisteredClaimNames.Sub,
+            RoleClaimType = ClaimTypes.Role
         };
 
         // Sesión única (1 login por cuenta)
@@ -67,8 +79,7 @@ builder.Services
                 {
                     var db = ctx.HttpContext.RequestServices.GetRequiredService<dbContext>();
                     var principal = ctx.Principal!;
-                    var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier)
-                             ?? principal.FindFirstValue("sub");
+                    var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
                     var jti = principal.FindFirstValue("jti");
 
                     if (string.IsNullOrEmpty(sub) || string.IsNullOrEmpty(jti))
@@ -91,11 +102,11 @@ builder.Services
                         ctx.Fail("Sesión no válida o caducada.");
                         return;
                     }
-                }
-                catch
-                {
-                    ctx.Fail("Error validando la sesión.");
-                }
+                    }
+                    catch
+                    {
+                        ctx.Fail("Error validando la sesión.");
+                    }
             }
         };
     });
@@ -108,43 +119,35 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "FamilyApp API", Version = "v1" });
 
-    var scheme = new OpenApiSecurityScheme
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
+        Scheme = "bearer",        // en minúsculas
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Introduce: Bearer {tu_token}"
-    };
-    c.AddSecurityDefinition("Bearer", scheme);
+        Description = "Pega SOLO el token (sin 'Bearer ')"
+    });
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
-        [scheme] = Array.Empty<string>()
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id   = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
     });
 });
 
+
 // -------------------- Build --------------------
 var app = builder.Build();
-
-// Semilla de usuario admin (solo ejemplo)
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<dbContext>();
-    var pwd = scope.ServiceProvider.GetRequiredService<IPasswordService>();
-
-    if (!db.Users.Any())
-    {
-        db.Users.Add(new AppUser
-        {
-            Email = "gerardojao@gmail.com",
-            PasswordHash = pwd.Hash("Gjaoa*1970"),
-            Role = "admin",
-            IsActive = true
-        });
-        db.SaveChanges();
-    }
-}
 
 // -------------------- Middleware (después de Build) --------------------
 if (app.Environment.IsDevelopment())

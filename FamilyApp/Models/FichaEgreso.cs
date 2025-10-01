@@ -9,7 +9,7 @@ public partial class FichaEgreso
 {
     public int Id { get; set; }
 
-    public string Foto { get; set; } = null!;
+    public string? Foto { get; set; } = null!;
 
     public DateTime? Fecha { get; set; }
 

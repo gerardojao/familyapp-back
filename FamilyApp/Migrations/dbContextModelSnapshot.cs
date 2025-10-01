@@ -97,6 +97,11 @@ namespace FamilyApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Descripcion")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -109,14 +114,19 @@ namespace FamilyApp.Migrations
                     b.Property<DateTime?>("Fecha")
                         .HasColumnType("datetime");
 
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("FechaEliminacion")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Foto")
-                        .IsRequired()
-                        .HasMaxLength(50)
+                        .HasMaxLength(255)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<decimal>("Importe")
                         .HasColumnType("decimal(18, 2)");
@@ -130,7 +140,17 @@ namespace FamilyApp.Migrations
                     b.Property<int>("NombreEgreso")
                         .HasColumnType("int");
 
+                    b.Property<string>("UsuarioCreacion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("UsuarioModificacion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UsuarioCreacion", "Eliminado", "Fecha");
 
                     b.ToTable("FichaEgreso", (string)null);
                 });
@@ -143,23 +163,36 @@ namespace FamilyApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Descripcion")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("Eliminado")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<DateTime?>("Fecha")
                         .HasColumnType("datetime");
 
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("FechaEliminacion")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Foto")
-                        .HasMaxLength(50)
+                        .HasMaxLength(255)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<decimal>("Importe")
                         .HasColumnType("decimal(18, 2)");
@@ -173,7 +206,17 @@ namespace FamilyApp.Migrations
                     b.Property<int>("NombreIngreso")
                         .HasColumnType("int");
 
+                    b.Property<string>("UsuarioCreacion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("UsuarioModificacion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UsuarioCreacion", "Eliminado", "Fecha");
 
                     b.ToTable("FichaIngreso", (string)null);
                 });
@@ -195,6 +238,60 @@ namespace FamilyApp.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Ingreso", (string)null);
+                });
+
+            modelBuilder.Entity("FamilyApp.Models.PasswordReset", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RequestIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("RequestUserAgent")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(88)
+                        .HasColumnType("nvarchar(88)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResets");
+                });
+
+            modelBuilder.Entity("FamilyApp.Models.PasswordReset", b =>
+                {
+                    b.HasOne("FamilyApp.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

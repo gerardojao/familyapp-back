@@ -1,8 +1,9 @@
 ﻿using FamilyApp.Data;
+using FamilyApp.DTOs.Ingresos;
 using FamilyApp.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FamilyApp.DTOs.Ingresos;
 
 
 namespace FamilyApp.Controllers
@@ -14,24 +15,63 @@ namespace FamilyApp.Controllers
         private readonly IRepository _repository;
         private readonly IWebHostEnvironment _env;
         private readonly dbContext _context;
+        private readonly ICurrentUserService _currentUserService;
 
-        public IngresoController(IRepository repository, IWebHostEnvironment env, dbContext context)
+        public IngresoController(IRepository repository, IWebHostEnvironment env, dbContext context, ICurrentUserService currentUserService)
         {
             _repository = repository;
             _env = env;
             _context = context;
+            _currentUserService = currentUserService;
         }
 
+        //[HttpGet]
+        //public async Task<ActionResult<IEnumerable<Ingreso>>> GetIngresos()
+        //{
+        //    Respuesta<object> respuesta = new();
+        //    try
+        //    {
+        //        var ingresos = await _repository.SelectAll<Ingreso>();
+        //        if (ingresos != null)
+        //        {
+        //            foreach (var item in ingresos)
+        //            {
+        //                respuesta.Data.Add(new
+        //                {
+        //                    item.Id,
+        //                    item.NombreIngreso
+        //                });
+        //            }
+        //            respuesta.Ok = 1;
+        //            respuesta.Message = "Ingresos Registrados";
+        //        }
+        //        else
+        //        {
+        //            respuesta.Ok = 0;
+        //            respuesta.Message = "No se encuenta ningun ingreso";
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        respuesta.Ok = 0;
+        //        respuesta.Message = e.Message + " " + e.InnerException;
+        //    }
+        //    return Ok(respuesta);
+
+        //}
+       
+
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Ingreso>>> GetIngresos()
         {
             Respuesta<object> respuesta = new();
             try
             {
-                var ingresos = await _repository.SelectAll<Ingreso>();
-                if (ingresos != null)
+                var egresos = await _repository.SelectAll<Ingreso>();
+                if (egresos != null)
                 {
-                    foreach (var item in ingresos)
+                    foreach (var item in egresos)
                     {
                         respuesta.Data.Add(new
                         {
@@ -40,12 +80,12 @@ namespace FamilyApp.Controllers
                         });
                     }
                     respuesta.Ok = 1;
-                    respuesta.Message = "Ingresos Registrados";
+                    respuesta.Message = "Egresos cargados en sistema";
                 }
                 else
                 {
                     respuesta.Ok = 0;
-                    respuesta.Message = "No se encuenta ningun ingreso";
+                    respuesta.Message = "No se encuenta ningun egreso";
                 }
             }
             catch (Exception e)
@@ -58,81 +98,69 @@ namespace FamilyApp.Controllers
         }
 
 
+        [Authorize]
         [HttpGet("detalle")]
         public async Task<ActionResult> GetIngresosDetalle(
-      [FromQuery] DateTime? fechaInicio,
-      [FromQuery] DateTime? fechaFin,
-      [FromQuery] int? tipoId)
+        [FromQuery] DateTime? fechaInicio,
+        [FromQuery] DateTime? fechaFin,
+        [FromQuery] int? tipoId)
         {
-            var respuesta = new Respuesta<object>();
+            var uidStr = _currentUserService.UserIdInt?.ToString() ?? "";
+           // if (uid == 0) return Unauthorized();
 
-            try
+            if (fechaInicio.HasValue && fechaFin.HasValue && fechaFin < fechaInicio)
+                return BadRequest(new { message = "La fecha fin no puede ser menor que la fecha inicio." });
+
+            var start = fechaInicio?.Date;
+            var endExcl = fechaFin?.Date.AddDays(1);
+            var isAdmin = User.IsInRole("admin");
+            var raw = await _context.FichaIngresos
+                .AsNoTracking()                
+                .Where(f => !f.Eliminado
+                    && (isAdmin || EF.Property<string>(f, "UsuarioCreacion") == uidStr)
+                    && (!start.HasValue || f.Fecha >= start)
+                    && (!endExcl.HasValue || f.Fecha < endExcl)
+                    && (!tipoId.HasValue || f.NombreIngreso == tipoId.Value))
+                .Join(_context.Ingresos.AsNoTracking(),
+                      f => f.NombreIngreso, i => i.Id,
+                      (f, i) => new {
+                          Id = f.Id,
+                          Fecha = f.Fecha,
+                          Mes = f.Mes,
+                          TipoId = i.Id,
+                          Tipo = i.NombreIngreso,
+                          Descripcion = f.Descripcion,
+                          Importe = f.Importe
+                      })
+                .OrderByDescending(x => x.Fecha ?? DateTime.MinValue)
+                .ThenByDescending(x => x.Id)
+                .ToListAsync();
+            Console.WriteLine(raw);
+            var respuesta = new Respuesta<object>
             {
-                if (fechaInicio.HasValue && fechaFin.HasValue && fechaFin < fechaInicio)
-                    return BadRequest(new { message = "La fecha fin no puede ser menor que la fecha inicio." });
-
-                // Normalizamos a días y usamos [inicio, fin+1 día)
-                DateTime? start = fechaInicio?.Date;
-                DateTime? endExcl = fechaFin?.Date.AddDays(1);
-
-                var q = _context.FichaIngresos.AsNoTracking()
-                    .Join(_context.Ingresos.AsNoTracking(),
-                          f => f.NombreIngreso,
-                          i => i.Id,
-                          (f, i) => new { f, i })
-                    .Where(x => !x.f.Eliminado);
-
-                if (start.HasValue)
-                    q = q.Where(x => x.f.Fecha >= start.Value);   // EF traduce DateTime? >= DateTime
-
-                if (endExcl.HasValue)
-                    q = q.Where(x => x.f.Fecha < endExcl.Value);
-
-                if (tipoId.HasValue)
-                    q = q.Where(x => x.f.NombreIngreso == tipoId.Value);
-
-                var detalles = await q
-                    .OrderByDescending(x => x.f.Fecha ?? DateTime.MinValue) // por si hay NULLs
-                    .ThenByDescending(x => x.f.Id)
-                    .Select(x => new
-                    {
-                        id = x.f.Id,
-                        fecha = x.f.Fecha,
-                        mes = x.f.Mes,
-                        tipoId = x.i.Id,
-                        tipo = x.i.NombreIngreso,
-                        descripcion = x.f.Descripcion,
-                        importe = x.f.Importe
-                    })
-                    .ToListAsync();
-
-                respuesta.Data.Add(detalles);
-                respuesta.Ok = 1;
-                respuesta.Message = "Detalle de ingresos";
-                return Ok(respuesta);
-            }
-            catch (Exception e)
-            {
-                respuesta.Ok = 0;
-                respuesta.Message = e.Message + (e.InnerException != null ? " " + e.InnerException.Message : "");
-                return Ok(respuesta);
-            }
+                Ok = 1,
+                Message = "Detalle de ingresos",
+                Data = { raw }
+            };
+            return Ok(respuesta);
         }
 
 
 
-
-
-        // GET: api/SolicitudIngreso
+        //GET: api/SolicitudIngreso
         [HttpGet("totales")]
         public async Task<ActionResult<IEnumerable<Ingreso>>> GetAllIngresos()
         {
             Respuesta<object> respuesta = new();
             try
             {
+                var uidStr = _currentUserService.UserIdInt?.ToString() ?? "";
+                var isAdmin = User.IsInRole("admin");
+
                 var ingre = await (from _ingreso in _context.Ingresos
                                    join _fIngreso in _context.FichaIngresos on _ingreso.Id equals _fIngreso.NombreIngreso
-                                   where !_fIngreso.Eliminado                           // <- filtro
+                                   where !_fIngreso.Eliminado &&
+                                   (isAdmin || EF.Property<string>(_fIngreso, "UsuarioCreacion") == uidStr)                          // <- filtro
                                    select new { _ingreso.NombreIngreso, _fIngreso.Importe })
                                   .OrderByDescending(x => x.Importe)
                                   .ToListAsync();
@@ -140,12 +168,12 @@ namespace FamilyApp.Controllers
                 if (ingre != null)
                 {
                     var ingreT = from i in ingre
-                                group i by i.NombreIngreso into totals
-                                select new
-                                {
-                                    Cuenta_Ingreso = totals.Key,
-                                    Total = totals.Sum(e=>e.Importe)
-                                };
+                                 group i by i.NombreIngreso into totals
+                                 select new
+                                 {
+                                     Cuenta_Ingreso = totals.Key,
+                                     Total = totals.Sum(e => e.Importe)
+                                 };
                     respuesta.Data.Add(ingreT);
                     respuesta.Ok = 1;
                     respuesta.Message = "Ingresos e Importe";
@@ -164,6 +192,7 @@ namespace FamilyApp.Controllers
             return Ok(respuesta);
         }
 
+       
         [HttpGet("totalesPorMes")]
         public async Task<ActionResult> GetIngresosPorMesQuery([FromQuery] DateTime fechaInicio,
                                                          [FromQuery] DateTime fechaFin)
@@ -299,7 +328,8 @@ namespace FamilyApp.Controllers
         public async Task<ActionResult> GetUltimos([FromQuery] int take = 5)
         {
             var respuesta = new Respuesta<object>();
-
+            var uidStr = _currentUserService.UserIdInt?.ToString() ?? "";
+            var isAdmin = User.IsInRole("admin");
             try
             {
                 if (take <= 0) take = 5;
@@ -309,7 +339,8 @@ namespace FamilyApp.Controllers
                 var ingresosQ =
                     from f in _context.FichaIngresos.AsNoTracking()
                     join i in _context.Ingresos.AsNoTracking() on f.NombreIngreso equals i.Id
-                    where !f.Eliminado
+                    where !f.Eliminado &&
+                                   (isAdmin || EF.Property<string>(f, "UsuarioCreacion") == uidStr)
                     select new MovimientoDTO
                     {
                         Id = f.Id,
@@ -326,7 +357,8 @@ namespace FamilyApp.Controllers
                 var egresosQ =
                     from f in _context.FichaEgresos.AsNoTracking()
                     join e in _context.Egresos.AsNoTracking() on f.NombreEgreso equals e.Id
-                    where !f.Eliminado
+                    where !f.Eliminado  &&
+                                   (isAdmin || EF.Property<string>(f, "UsuarioCreacion") == uidStr)
                     select new MovimientoDTO
                     {
                         Id = f.Id,

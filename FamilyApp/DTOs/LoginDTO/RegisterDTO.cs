@@ -1,9 +1,17 @@
-﻿namespace FamilyApp.DTOs.LoginDTO
+﻿using System.Text.Json.Serialization;
+
+namespace FamilyApp.DTOs.LoginDTO
 {
     public class RegisterDTO
     {
-        public string Email { get; set; } = default!;
-        public string Password { get; set; } = default!;
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+
+        [JsonPropertyName("password")]
+        public string? Password { get; set; }
+
+        // El front envía "nombre"
+        [JsonPropertyName("nombre")]
         public string? FullName { get; set; }
     }
 }

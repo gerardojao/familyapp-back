@@ -1,10 +1,9 @@
 ﻿
 
-using Microsoft.AspNetCore.Mvc;
-using FamilyApp.Models;
-
-
 using FamilyApp.Data;
+using FamilyApp.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace FamilyApp.Controllers
@@ -58,15 +57,24 @@ namespace FamilyApp.Controllers
         }
 
         //POST: api/FichaEgreso
-       [HttpPost("Create")]
+        [Authorize]
+        [HttpPost("Create")]
         public async Task<ActionResult> PostFichaIngreso(FichaIngreso fichaIngreso)
         {
             Respuesta<object> respuesta = new();
             try
             {
-                await _repository.CreateAsync(fichaIngreso);
+                // saneo básico (si lo necesitas)
+                fichaIngreso.Eliminado = false;
+                fichaIngreso.FechaEliminacion = null;
+
+                var newId = await _repository.CreateAsync(fichaIngreso);
+
                 respuesta.Ok = 1;
                 respuesta.Message = "Success";
+                respuesta.Data.Add(new { Id = newId });
+                return Ok(respuesta);
+
             }
             catch (Exception e)
             {
@@ -74,7 +82,7 @@ namespace FamilyApp.Controllers
                 respuesta.Message = e.Message + " " + e.InnerException;
                 return Ok(respuesta);
             }
-            return Ok(respuesta);
+           
         }
       
 

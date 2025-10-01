@@ -42,6 +42,16 @@ public class AuthController : ControllerBase
         public string Password { get; set; } = "";
     }
 
+        [Authorize]
+        [HttpGet("auth/whoami")]
+        public IActionResult WhoAmI() => Ok(new
+        {
+            sub = User.FindFirst("sub")?.Value,
+            email = User.FindFirst("email")?.Value,
+            jti = User.FindFirst("jti")?.Value
+        });
+
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
@@ -81,57 +91,73 @@ public class AuthController : ControllerBase
 
 
     // POST: api/auth/register
-    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDTO dto)
     {
-        // Validaciones mínimas
-        if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
-            return BadRequest(new { message = "Email y contraseña son obligatorios." });
+        if (dto is null)
+            return BadRequest(new { ok = false, message = "Body vacío." });
 
-        var email = dto.Email.Trim().ToLowerInvariant();
+        var email = dto.Email?.Trim();
+        var password = dto.Password ?? "";
 
-        // Reglas simples de contraseña (ajústalas a tu gusto)
-        if (dto.Password.Length < 8 ||
-            !dto.Password.Any(char.IsUpper) ||
-            !dto.Password.Any(char.IsLower) ||
-            !dto.Password.Any(char.IsDigit))
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+            return BadRequest(new { ok = false, message = "Email y contraseña son obligatorios." });
+
+        email = email.ToLowerInvariant();
+
+        // Reglas: ajústalas a lo que quieras exigir
+        if (password.Length < 8 ||
+            !password.Any(char.IsUpper) ||
+            !password.Any(char.IsLower) ||
+            !password.Any(char.IsDigit))
         {
-            return BadRequest(new { message = "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número." });
+            return BadRequest(new
+            {
+                ok = false,
+                message = "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número."
+            });
         }
 
-        // ¿ya existe?
-        var exists = await _db.Users.AnyAsync(u => u.Email == email);
-        if (exists) return Conflict(new { message = "El correo ya está registrado." });
+        // ¿Existe ya?
+        var exists = await _db.Users.AsNoTracking().AnyAsync(u => u.Email == email);
+        if (exists)
+            return Conflict(new { ok = false, message = "El correo ya está registrado." });
 
-        // Crear usuario (ROL FIJO user)
+        // Crear usuario
         var user = new AppUser
         {
             Email = email,
-            FullName = dto.FullName,
-            PasswordHash = _pwd.Hash(dto.Password),
-            Role = "user",               // <- forzado en servidor
+            FullName = dto.FullName, // <- ahora sí llega desde "nombre"
+            PasswordHash = _pwd.Hash(password),
+            Role = "user",
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
 
         _db.Users.Add(user);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(); // aquí ya tienes user.Id
 
-        // Opcional: auto-login tras registro (misma lógica que Login)
+        // (Opcional) Auto-login tras registro
         var jti = Guid.NewGuid();
         var token = _tokens.CreateToken(user, jti, out var expiresAt);
         user.ActiveSessionJti = jti;
         user.ActiveSessionExpiresAt = expiresAt;
         await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(Register), new
+        // Devuelve shape que tu front ya sabe leer
+        return Ok(new
         {
-            user = new { user.Id, user.Email, user.Role, user.FullName },
-            token,
-            expiresAt
+            ok = true,
+            message = "Cuenta creada correctamente.",
+            data = new
+            {
+                user = new { user.Id, user.Email, user.Role, user.FullName },
+                token,
+                expiresAt
+            }
         });
     }
+
 
 
     // === FORGOT PASSWORD ===

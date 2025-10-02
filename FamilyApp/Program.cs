@@ -34,7 +34,8 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 // IEmailSender: registra SOLO una vez y SIEMPRE antes del Build.
 // Por ahora usamos DevEmailSender tanto en dev como en prod.
 // (Cuando tengas uno real, haz el if por environment aquí mismo.)
-builder.Services.AddSingleton<IEmailSender, DevEmailSender>();
+//builder.Services.AddSingleton<IEmailSender, DevEmailSender>();
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 
 // CORS
 builder.Services.AddCors(options =>

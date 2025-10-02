@@ -4,10 +4,12 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-	</PropertyGroup>
+	  <UserSecretsId>027389b2-161e-4eb3-8db2-be320220882e</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<!-- EF Core 8.x (compatible con .NET 8) -->
+		<PackageReference Include="MailKit" Version="4.14.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.*" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">

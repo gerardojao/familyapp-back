@@ -10,12 +10,4 @@ public abstract class Auditable
     public DateTime FechaModificacion { get; set; }
 }
 
-// Common/IHasKey.cs
-public interface IHasKey { int Id { get; set; } }
 
-// Common/ISoftDeletable.cs
-public interface ISoftDeletable
-{
-    bool Eliminado { get; set; }
-    DateTime? FechaEliminacion { get; set; }
-}

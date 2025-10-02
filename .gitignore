@@ -1,0 +1,25 @@
+﻿# --- Visual Studio / build ---
+.vs/
+*.user
+*.suo
+bin/
+obj/
+Debug/
+Release/
+TestResults/
+*.nupkg
+*.snupkg
+
+# --- Publicaciones / artefactos ---
+publish/
+dist/
+logs/
+*.log
+
+# --- Sistema ---
+Thumbs.db
+desktop.ini
+
+# --- Secretos / configuración sensible ---
+appsettings.Production.json
+appsettings.*.local.json

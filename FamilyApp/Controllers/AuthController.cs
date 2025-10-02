@@ -173,6 +173,13 @@ public class AuthController : ControllerBase
         if (user == null)
             return Ok(new { message = "Si el email existe, se ha enviado un enlace de reseteo." });
 
+        var now = DateTime.UtcNow;
+
+        // Invalidar solicitudes previas pendientes para evitar enlaces viejos reutilizables
+        await _db.PasswordResets
+            .Where(x => x.UserId == user.Id && x.UsedAt == null)
+            .ExecuteDeleteAsync();
+
         // Generar token y guardar hash
         var token = SecureToken.CreateUrlToken(32);
         var tokenHash = SecureToken.Sha256Base64(token);
@@ -181,7 +188,8 @@ public class AuthController : ControllerBase
         {
             UserId = user.Id,
             TokenHash = tokenHash,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+            CreatedAt = now,
+            ExpiresAt = now.AddMinutes(30),
             RequestIp = HttpContext.Connection.RemoteIpAddress?.ToString(),
             RequestUserAgent = Request.Headers.UserAgent.ToString()
         });
@@ -196,7 +204,7 @@ public class AuthController : ControllerBase
         var html = $@"
             <p>Hola,</p>
             <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace:</p>
-            <p><a href=""{link}"">Restablecer contraseña</a></p>
+            <p><a href=\"{link}\">Restablecer contraseña</a></p>
             <p>El enlace caduca en 30 minutos. Si no lo solicitaste, ignora este correo.</p>";
 
         await _mailer.SendAsync(user.Email, "Restablecer contraseña - FamilyApp", html);

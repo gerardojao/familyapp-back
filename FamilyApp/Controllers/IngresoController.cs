@@ -1,7 +1,10 @@
-﻿using FamilyApp.Data;
-using FamilyApp.DTOs.Ingresos;
-using FamilyApp.Models;
+using FamilyApp.Application.Abstractions.Data;
+using FamilyApp.Infrastructure.Persistence;
+using FamilyApp.Application.DTOs.Ingresos;
+using FamilyApp.Application.Abstractions;
+using FamilyApp.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,10 +17,10 @@ namespace FamilyApp.Controllers
     {
         private readonly IRepository _repository;
         private readonly IWebHostEnvironment _env;
-        private readonly dbContext _context;
+        private readonly FamilyAppDbContext _context;
         private readonly ICurrentUserService _currentUserService;
 
-        public IngresoController(IRepository repository, IWebHostEnvironment env, dbContext context, ICurrentUserService currentUserService)
+        public IngresoController(IRepository repository, IWebHostEnvironment env, FamilyAppDbContext context, ICurrentUserService currentUserService)
         {
             _repository = repository;
             _env = env;

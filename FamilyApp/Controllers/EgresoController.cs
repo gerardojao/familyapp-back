@@ -1,7 +1,9 @@
-﻿using FamilyApp.Data;
-using FamilyApp.DTOs.Egresos;
-using FamilyApp.DTOs.Ingresos;
-using FamilyApp.Models;
+using FamilyApp.Application.Abstractions.Data;
+using FamilyApp.Infrastructure.Persistence;
+using FamilyApp.Application.DTOs.Egresos;
+using FamilyApp.Application.DTOs.Ingresos;
+using FamilyApp.Application.Abstractions;
+using FamilyApp.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +15,10 @@ namespace FamilyApp.Controllers
     public class EgresoController : ControllerBase
     {
         private readonly IRepository _repository;//private readonly IMapper _mapper;
-        private readonly dbContext _context;
+        private readonly FamilyAppDbContext _context;
         private readonly ICurrentUserService _currentUserService;
 
-        public EgresoController(IRepository repository, dbContext context, ICurrentUserService currentUserService)
+        public EgresoController(IRepository repository, FamilyAppDbContext context, ICurrentUserService currentUserService)
         {
             _repository = repository;
             _context = context;

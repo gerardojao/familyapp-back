@@ -1,9 +1,11 @@
-﻿
 
-using FamilyApp.Data;
-using FamilyApp.Models;
+
+using FamilyApp.Application.Abstractions.Data;
+using FamilyApp.Infrastructure.Persistence;
+using FamilyApp.Domain.Entities;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using FamilyApp.DTOs.Egresos;
+using FamilyApp.Application.DTOs.Egresos;
 using Microsoft.EntityFrameworkCore;
 
 namespace FamilyApp.Controllers

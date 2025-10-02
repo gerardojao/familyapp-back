@@ -1,19 +1,21 @@
-﻿// Controllers/AuthController.cs
-using FamilyApp.Data;
-using FamilyApp.DTOs.Auth;
-using FamilyApp.DTOs.LoginDTO;
-using FamilyApp.Models;
-using FamilyApp.Services;
+using FamilyApp.Infrastructure.Persistence;
+using FamilyApp.Application.DTOs.Login;
+using FamilyApp.Domain.Entities;
+using FamilyApp.Application.Abstractions;
+using FamilyApp.Application.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+
+namespace FamilyApp.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly dbContext _db;
+    private readonly FamilyAppDbContext _db;
     private readonly IPasswordService _pwd;
     private readonly ITokenService _tokens;
     private readonly IEmailSender _mailer;
@@ -21,7 +23,7 @@ public class AuthController : ControllerBase
     private readonly IWebHostEnvironment _env;
 
     public AuthController(
-        dbContext db,
+        FamilyAppDbContext db,
         IPasswordService pwd,
         ITokenService tokens,
         IEmailSender mailer,
@@ -57,7 +59,8 @@ public class AuthController : ControllerBase
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-        // ✅ primero el hash guardado, luego el password en texto plano
+        // Validación:
+ primero el hash guardado, luego el password en texto plano
         if (user == null || !_pwd.Verify(user.PasswordHash, dto.Password) || !user.IsActive)
             return Unauthorized(new { message = "Credenciales inválidas" });
 

@@ -1,6 +1,6 @@
-using FamilyApp.Data;
-using FamilyApp.Models;
-using FamilyApp.Services;
+using FamilyApp.Application;
+using FamilyApp.Infrastructure.Persistence;
+using FamilyApp.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -16,25 +16,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 
-// DB
-builder.Services.AddDbContext<dbContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-});
-
-// Servicios propios
-builder.Services.AddScoped<IPasswordService, PasswordService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IRepository, Repository<dbContext>>();
-
-// Program.cs
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-
-// IEmailSender: registra SOLO una vez y SIEMPRE antes del Build.
-// Por ahora usamos DevEmailSender tanto en dev como en prod.
-// (Cuando tengas uno real, haz el if por environment aquí mismo.)
-builder.Services.AddSingleton<IEmailSender, DevEmailSender>();
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // CORS
 builder.Services.AddCors(options =>
@@ -70,27 +53,27 @@ builder.Services
             RoleClaimType = ClaimTypes.Role
         };
 
-        // Sesión única (1 login por cuenta)
+        // SesiÃ³n Ãºnica (1 login por cuenta)
         options.Events = new JwtBearerEvents
         {
             OnTokenValidated = async ctx =>
             {
                 try
                 {
-                    var db = ctx.HttpContext.RequestServices.GetRequiredService<dbContext>();
+                    var db = ctx.HttpContext.RequestServices.GetRequiredService<FamilyAppDbContext>();
                     var principal = ctx.Principal!;
                     var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
                     var jti = principal.FindFirstValue("jti");
 
                     if (string.IsNullOrEmpty(sub) || string.IsNullOrEmpty(jti))
                     {
-                        ctx.Fail("Token inválido.");
+                        ctx.Fail("Token invÃ¡lido.");
                         return;
                     }
 
                     if (!int.TryParse(sub, out var userId))
                     {
-                        ctx.Fail("Sub inválido."); return;
+                        ctx.Fail("Sub invÃ¡lido."); return;
                     }
 
                     var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
@@ -99,13 +82,13 @@ builder.Services
                         || user.ActiveSessionJti.ToString() != jti
                         || (user.ActiveSessionExpiresAt.HasValue && user.ActiveSessionExpiresAt < DateTime.UtcNow))
                     {
-                        ctx.Fail("Sesión no válida o caducada.");
+                        ctx.Fail("SesiÃ³n no vÃ¡lida o caducada.");
                         return;
                     }
                     }
                     catch
                     {
-                        ctx.Fail("Error validando la sesión.");
+                        ctx.Fail("Error validando la sesiÃ³n.");
                     }
             }
         };
@@ -123,7 +106,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
-        Scheme = "bearer",        // en minúsculas
+        Scheme = "bearer",        // en minÃºsculas
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
         Description = "Pega SOLO el token (sin 'Bearer ')"
@@ -149,7 +132,7 @@ builder.Services.AddSwaggerGen(c =>
 // -------------------- Build --------------------
 var app = builder.Build();
 
-// -------------------- Middleware (después de Build) --------------------
+// -------------------- Middleware (despuÃ©s de Build) --------------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
